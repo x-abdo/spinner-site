@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Name & Photo Spinner Wheel</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(-45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ce79);
+            background-size: 400% 400%;
+            animation: gradient 12s ease infinite;
+            filter: brightness(100%);
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .spinner-container {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            perspective: 1000px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            transform-style: preserve-3d;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 255, 255, 0.6);
+            cursor: pointer; /* Indicate clickability */
+        }
+
+        .spinning {
+            animation: spinAnimation var(--spin-duration, 2s) cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+            -webkit-animation: spinAnimation var(--spin-duration, 2s) cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes spinAnimation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(var(--final-rotation)); }
+        }
+
+        @-webkit-keyframes spinAnimation {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(var(--final-rotation)); }
+        }
+
+        .name {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            transform-origin: center;
+            top: 50%;
+            left: 50%;
+        }
+
+        .photo {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+            transform-origin: center;
+            top: 50%;
+            left: 50%;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 35px solid #e74c3c;
+            z-index: 10;
+            filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.4));
+        }
+
+        .input-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: 700px;
+            width: 90%;
+            margin: 20px 0;
+            justify-content: center;
+            align-items: center;
+        }
+
+        input[type="text"], input[type="number"], input[type="range"] {
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        input[type="number"], input[type="range"] {
+            max-width: 100px;
+        }
+
+        input[type="file"] {
+            font-size: 14px;
+            padding: 10px 0;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        button, .suggest-button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover, .suggest-button:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #nameList {
+            margin: 15px 0;
+            font-size: 18px;
+            color: #2c3e50;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            max-width: 700px;
+            width: 90%;
+        }
+
+        .results-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            color: #3498db;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: color 0.3s, transform 0.2s;
+            z-index: 11;
+        }
+
+        .results-icon:hover {
+            color: #2980b9;
+            transform: scale(1.1);
+        }
+
+        #resultsArea {
+            display: none;
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 300px;
+            max-height: 50vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            z-index: 10;
+        }
+
+        .results-container {
+            width: 100%;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th, .results-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .results-table th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .results-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .results-photo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #3498db;
+        }
+
+        .no-results {
+            font-size: 16px;
+            color: #2c3e50;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        #winnerOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .winner-text {
+            font-size: 60px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            animation: winnerAnimation 3s ease-in-out;
+        }
+
+        .winner-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 4px solid white;
+            margin-top: 20px;
+            animation: winnerPhotoAnimation 3s ease-in-out;
+        }
+
+        @keyframes winnerAnimation {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        @keyframes winnerPhotoAnimation {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            opacity: 0.9;
+            animation: fall 3s ease-in-out forwards;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 0.9; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="results-icon" onclick="toggleResults()" title="View Results">📋</div>
+    <div id="resultsArea">
+        <div class="results-container">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Name</th>
+                        <th>Team</th>
+                        <th>Photo</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="spinner-container">
+        <div class="pointer"></div>
+        <div class="spinner" id="spinner"></div>
+    </div>
+    <div id="nameList"></div>
+    <div class="input-container">
+        <input type="text" id="nameInput" placeholder="Enter a name or emoji" onkeypress="if(event.key === 'Enter') addName()">
+        <button class="suggest-button" id="suggestButton" onclick="suggestName()" title="Suggest a Name">✉️</button>
+        <input type="file" id="photoInput" accept="image/*">
+        <input type="number" id="spinDuration" placeholder="Spin time (sec)" min="1" max="10" value="2">
+        <input type="text" id="teamInput" placeholder="Enter team name (optional)">
+        <input type="checkbox" id="teamModeToggle" title="Enable Team Mode">
+        <label for="teamModeToggle">Team Mode</label>
+        <input type="range" id="brightnessSlider" min="0" max="100" value="100" title="Adjust Brightness">
+        <button onclick="addName()">Add</button>
+        <button onclick="spin()">Spin</button>
+    </div>
+    <div id="winnerOverlay">
+        <div class="winner-text" id="winnerText"></div>
+        <img class="winner-photo" id="winnerPhoto" style="display: none;">
+    </div>
+
+    <script>
+        let names = [];
+        let photos = [];
+        let teams = [];
+        let isSpinning = false;
+        const MAX_NAMES = 12;
+        const DEFAULT_PHOTO = 'https://via.placeholder.com/44?text=User';
+        let history = JSON.parse(localStorage.getItem('selectionHistory')) || [];
+
+        // List of name suggestions
+        const nameSuggestions = [
+            'Alice', 'Bob', 'Charlie', 'Diana', 'Emma', 'Frank', 'Grace', 'Henry',
+            'Ivy', 'Jack', 'Katie', 'Liam', '😊', '🚀', '🌟', '🎉'
+        ];
+
+        // Initialize event listeners and brightness
+        document.addEventListener('DOMContentLoaded', () => {
+            const suggestButton = document.getElementById('suggestButton');
+            const brightnessSlider = document.getElementById('brightnessSlider');
+            const spinner = document.getElementById('spinner');
+
+            if (suggestButton) {
+                suggestButton.addEventListener('click', suggestName);
+                console.log('Suggest button event listener added');
+            } else {
+                console.error('Suggest button element not found on page load');
+            }
+
+            if (brightnessSlider) {
+                const savedBrightness = localStorage.getItem('brightness') || '100';
+                brightnessSlider.value = savedBrightness;
+                document.body.style.filter = `brightness(${savedBrightness}%)`;
+                brightnessSlider.addEventListener('input', adjustBrightness);
+                console.log('Brightness initialized:', savedBrightness);
+            } else {
+                console.error('Brightness slider not found');
+            }
+
+            if (spinner) {
+                spinner.addEventListener('click', spin);
+                console.log('Spinner click event listener added');
+            } else {
+                console.error('Spinner element not found on page load');
+            }
+        });
+
+        function suggestName() {
+            console.log('Suggest name triggered');
+            const nameInput = document.getElementById('nameInput');
+            if (!nameInput) {
+                console.error('Name input not found');
+                return;
+            }
+            const randomName = nameSuggestions[Math.floor(Math.random() * nameSuggestions.length)];
+            nameInput.value = randomName;
+            console.log('Suggested name:', randomName);
+        }
+
+        function adjustBrightness() {
+            const brightnessSlider = document.getElementById('brightnessSlider');
+            if (!brightnessSlider) {
+                console.error('Brightness slider not found');
+                return;
+            }
+            const brightness = brightnessSlider.value;
+            document.body.style.filter = `brightness(${brightness}%)`;
+            localStorage.setItem('brightness', brightness);
+            console.log('Brightness adjusted:', brightness);
+        }
+
+        function addName() {
+            const nameInput = document.getElementById('nameInput');
+            const photoInput = document.getElementById('photoInput');
+            const teamInput = document.getElementById('teamInput');
+            if (!nameInput || !photoInput || !teamInput) {
+                console.error('Input elements not found');
+                return;
+            }
+            const name = nameInput.value.trim();
+            const team = teamInput.value.trim();
+            
+            if (name) {
+                const teamMode = document.getElementById('teamModeToggle').checked;
+                const uniqueEntries = teamMode ? [...new Set(teams)].length : names.length;
+                if (uniqueEntries >= MAX_NAMES) {
+                    alert(`Maximum of ${MAX_NAMES} ${teamMode ? 'teams' : 'names'} reached!`);
+                    return;
+                }
+
+                const photoFile = photoInput.files[0];
+                const photoUrl = photoFile ? URL.createObjectURL(photoFile) : DEFAULT_PHOTO;
+                
+                names.push(name);
+                photos.push(photoUrl);
+                teams.push(team || 'No Team');
+                nameInput.value = '';
+                photoInput.value = '';
+                teamInput.value = '';
+                updateSpinner();
+                updateNameList();
+            } else {
+                alert('Please enter a name!');
+            }
+        }
+
+        function updateNameList() {
+            const nameList = document.getElementById('nameList');
+            if (!nameList) {
+                console.error('Name list element not found');
+                return;
+            }
+            const teamMode = document.getElementById('teamModeToggle').checked;
+            if (names.length === 0) {
+                nameList.innerHTML = 'No names added yet.';
+            } else if (teamMode) {
+                const teamCounts = {};
+                teams.forEach((team, i) => {
+                    teamCounts[team] = (teamCounts[team] || 0) + 1;
+                });
+                nameList.innerHTML = Object.entries(teamCounts)
+                    .map(([team, count]) => `${team || 'No Team'}: ${count}`)
+                    .join(', ') + ` (${names.length}/${MAX_NAMES} members)`;
+            } else {
+                nameList.innerHTML = `Names: ${names.map((name, i) => `${name}${teams[i] && teams[i] !== 'No Team' ? ` (${teams[i]})` : ''}`).join(', ')} (${names.length}/${MAX_NAMES})`;
+            }
+        }
+
+        function updateSpinner() {
+            const spinner = document.getElementById('spinner');
+            if (!spinner) {
+                console.error('Spinner element not found');
+                return;
+            }
+            spinner.innerHTML = '';
+            const teamMode = document.getElementById('teamModeToggle').checked;
+            const displayItems = teamMode ? [...new Set(teams.filter(t => t !== 'No Team'))] : names;
+            const segmentAngle = displayItems.length > 0 ? 360 / displayItems.length : 360;
+            spinner.style.background = displayItems.length > 0 ? 'conic-gradient(' + generateColors(displayItems.length, segmentAngle) + ')' : 'linear-gradient(#ccc, #aaa)';
+
+            displayItems.forEach((item, index) => {
+                const angle = (index * segmentAngle) + (segmentAngle / 2);
+
+                const nameElement = document.createElement('div');
+                nameElement.className = 'name';
+                nameElement.textContent = item;
+                nameElement.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-140px) rotate(-${angle}deg)`;
+                spinner.appendChild(nameElement);
+
+                if (!teamMode) {
+                    const photoElement = document.createElement('img');
+                    photoElement.className = 'photo';
+                    photoElement.src = photos[index];
+                    photoElement.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-100px) rotate(-${angle}deg)`;
+                    spinner.appendChild(photoElement);
+                }
+            });
+        }
+
+        function generateColors(count, segmentAngle) {
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                const hue = (i / count) * 360;
+                const startAngle = i * segmentAngle;
+                const endAngle = (i + 1) * segmentAngle;
+                colors.push(`hsl(${hue}, 70%, 55%) ${startAngle}deg ${endAngle}deg`);
+            }
+            return colors.join(', ');
+        }
+
+        function createConfetti() {
+            const overlay = document.getElementById('winnerOverlay');
+            if (!overlay) {
+                console.error('Winner overlay not found');
+                return;
+            }
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.animationDelay = `${Math.random() * 1.5}s`;
+                overlay.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+
+        function updateResults() {
+            const resultsBody = document.getElementById('resultsBody');
+            if (!resultsBody) {
+                console.error('Results body not found');
+                return;
+            }
+            resultsBody.innerHTML = '';
+            if (history.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.textContent = 'No selections yet.';
+                resultsBody.appendChild(noResults);
+            } else {
+                history.forEach(entry => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${entry.order}</td>
+                        <td>${entry.name}</td>
+                        <td>${entry.team || 'No Team'}</td>
+                        <td><img src="${entry.photo}" class="results-photo" alt="${entry.name}"></td>
+                    `;
+                    resultsBody.appendChild(row);
+                });
+            }
+        }
+
+        function toggleResults() {
+            const resultsArea = document.getElementById('resultsArea');
+            if (!resultsArea) {
+                console.error('Results area not found');
+                return;
+            }
+            const isVisible = resultsArea.style.display === 'block';
+            console.log('Toggling results, current visibility:', isVisible);
+            resultsArea.style.display = isVisible ? 'none' : 'block';
+            if (resultsArea.style.display === 'block') {
+                console.log('Updating results display');
+                updateResults();
+            }
+        }
+
+        function spin() {
+            console.log('Spinner click triggered');
+            if (isSpinning || names.length === 0) {
+                if (names.length === 0) alert('Please add at least one name!');
+                return;
+            }
+
+            isSpinning = true;
+            const spinner = document.getElementById('spinner');
+            const winnerOverlay = document.getElementById('winnerOverlay');
+            const winnerText = document.getElementById('winnerText');
+            const winnerPhoto = document.getElementById('winnerPhoto');
+            const spinDurationInput = document.getElementById('spinDuration');
+            const teamMode = document.getElementById('teamModeToggle').checked;
+            if (!spinner || !winnerOverlay || !winnerText || !winnerPhoto || !spinDurationInput) {
+                console.error('Spinner elements missing:', { spinner, winnerOverlay, winnerText, winnerPhoto, spinDurationInput });
+                alert('Error: Unable to access spinner elements. Please try refreshing the page.');
+                isSpinning = false;
+                return;
+            }
+
+            let spinDuration = parseFloat(spinDurationInput.value) || 2;
+            if (spinDuration < 1 || spinDuration > 10) spinDuration = 2;
+
+            const displayItems = teamMode ? [...new Set(teams.filter(t => t !== 'No Team'))] : names;
+            if (displayItems.length === 0) {
+                alert('No valid teams added!');
+                isSpinning = false;
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * displayItems.length);
+            const segmentAngle = 360 / displayItems.length;
+            const randomOffset = (Math.random() - 0.5) * (segmentAngle * 0.8);
+            const rotations = 1440 + (randomIndex * segmentAngle) + (segmentAngle / 2) + randomOffset;
+            console.log('Starting spin:', { spinDuration, randomIndex, teamMode, displayItems });
+
+            spinner.style.setProperty('--final-rotation', `${rotations}deg`);
+            spinner.style.animation = `spinAnimation ${spinDuration}s cubic-bezier(0.1, 0.8, 0.2, 1) forwards`;
+            spinner.style.webkitAnimation = `spinAnimation ${spinDuration}s cubic-bezier(0.1, 0.8, 0.2, 1) forwards`;
+            spinner.classList.add('spinning');
+
+            setTimeout(() => {
+                console.log('Spin completed, selecting winner');
+                let selectedName, selectedPhoto, selectedTeam;
+                if (teamMode) {
+                    const selectedTeamName = displayItems[randomIndex];
+                    const teamMembers = names.filter((_, i) => teams[i] === selectedTeamName);
+                    const teamPhotos = photos.filter((_, i) => teams[i] === selectedTeamName);
+                    const teamIndices = names.map((_, i) => i).filter(i => teams[i] === selectedTeamName);
+                    if (teamMembers.length === 0) {
+                        console.error('No members in selected team:', selectedTeamName);
+                        alert('Error: No members in selected team.');
+                        isSpinning = false;
+                        return;
+                    }
+                    const memberIndex = Math.floor(Math.random() * teamMembers.length);
+                    selectedName = teamMembers[memberIndex];
+                    selectedPhoto = teamPhotos[memberIndex];
+                    selectedTeam = selectedTeamName;
+                    const globalIndex = teamIndices[memberIndex];
+                    names.splice(globalIndex, 1);
+                    photos.splice(globalIndex, 1);
+                    teams.splice(globalIndex, 1);
+                } else {
+                    selectedName = names[randomIndex];
+                    selectedPhoto = photos[randomIndex];
+                    selectedTeam = teams[randomIndex];
+                    names.splice(randomIndex, 1);
+                    photos.splice(randomIndex, 1);
+                    teams.splice(randomIndex, 1);
+                }
+
+                history.push({ name: selectedName, photo: selectedPhoto, team: selectedTeam, order: history.length + 1 });
+                localStorage.setItem('selectionHistory', JSON.stringify(history));
+                winnerText.textContent = `Winner: ${selectedName}${selectedTeam && selectedTeam !== 'No Team' ? ` (${selectedTeam})` : ''}`;
+                winnerPhoto.src = selectedPhoto;
+                winnerPhoto.style.display = selectedPhoto === DEFAULT_PHOTO ? 'none' : 'block';
+                winnerOverlay.style.display = 'flex';
+                createConfetti();
+
+                setTimeout(() => {
+                    console.log('Winner animation completed');
+                    winnerOverlay.style.display = 'none';
+                    winnerText.textContent = '';
+                    winnerPhoto.src = '';
+                    winnerPhoto.style.display = 'none';
+                    spinner.style.animation = 'none';
+                    spinner.style.webkitAnimation = 'none';
+                    spinner.classList.remove('spinning');
+                    spinner.style.transform = 'rotate(0deg)';
+                    updateSpinner();
+                    updateNameList();
+                    updateResults();
+                    isSpinning = false;
+                }, 3000);
+            }, spinDuration * 1000);
+        }
+
+        updateResults();
+        updateNameList();
+    </script>
+</body>
+</html>
